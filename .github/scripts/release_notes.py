@@ -3,8 +3,7 @@ import json, os
 m = json.load(open("meta.json"))
 latest = m.get("changelog", "").split(" 0.")[0].strip()  # changelog lists newest first
 repo = os.environ.get("GITHUB_REPOSITORY", "goondocklabs/jellyfin-lib-doctor")
-abi = ".".join(m["targetAbi"].split(".")[:2])
 print(latest)
 print()
-print(f"**Install:** Jellyfin → Dashboard → Plugins → Repositories → add `https://raw.githubusercontent.com/{repo}/main/manifest.json`, "
-      f"then install **Library Doctor** from the Catalog and restart Jellyfin. Requires Jellyfin {abi}+.")
+print(f"**Install:** Jellyfin, Dashboard, Plugins, Repositories: add `https://raw.githubusercontent.com/{repo}/main/manifest.json`, "
+      f"then install **Library Doctor** from the plugin list and restart Jellyfin. Built for Jellyfin 12.2.")

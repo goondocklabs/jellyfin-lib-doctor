@@ -1,0 +1,12 @@
+[
+  {
+    "guid": "9dff327a-0a86-41c0-b5b9-26ecede62164",
+    "name": "Library Doctor",
+    "description": "A checkup for your Jellyfin library: unreadable files, missing episodes, duplicates, bad matches, missing posters, and files that will need converting.",
+    "overview": "Find what's wrong with your library before it ruins movie night.",
+    "owner": "goondocklabs",
+    "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/goondocklabs/jellyfin-lib-doctor/main/logo.png",
+    "versions": []
+  }
+]
