@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Library Doctor</title>
+</head>
+<body>
+    <div id="LibraryDoctorPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+        <style>
+            #LibraryDoctorPage .ld-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8em; margin: 1.2em 0; }
+            #LibraryDoctorPage .ld-tile { background: rgba(255,255,255,.05); border-radius: 10px; padding: .9em 1em; cursor: pointer; border: 2px solid transparent; }
+            #LibraryDoctorPage .ld-tile.on { border-color: #00a4dc; }
+            #LibraryDoctorPage .ld-tile b { display: block; font-size: 2em; line-height: 1.1; }
+            #LibraryDoctorPage .ld-tile.clean b { color: #6c6; }
+            #LibraryDoctorPage .ld-tile.bad b { color: #f66; }
+            #LibraryDoctorPage .ld-tile.warn b { color: #fb4; }
+            #LibraryDoctorPage .ld-tile span { opacity: .8; font-size: .9em; }
+            #LibraryDoctorPage .ld-section h2 { margin: 1.4em 0 .2em; }
+            #LibraryDoctorPage .ld-section > p { opacity: .75; margin: 0 0 .8em; }
+            #LibraryDoctorPage .ld-item { background: rgba(255,255,255,.04); border-radius: 8px; padding: .7em .9em; margin: .45em 0; border-left: 4px solid #888; }
+            #LibraryDoctorPage .ld-item.problem { border-left-color: #f55; }
+            #LibraryDoctorPage .ld-item.warning { border-left-color: #fb4; }
+            #LibraryDoctorPage .ld-item.info { border-left-color: #5ad; }
+            #LibraryDoctorPage .ld-item a { color: inherit; font-weight: 600; text-decoration: none; }
+            #LibraryDoctorPage .ld-item a:hover { text-decoration: underline; }
+            #LibraryDoctorPage .ld-detail { margin: .25em 0; opacity: .9; }
+            #LibraryDoctorPage .ld-path { font-family: monospace; font-size: .85em; opacity: .65; white-space: pre-wrap; word-break: break-all; }
+            #LibraryDoctorPage .ld-fix { font-family: monospace; font-size: .85em; background: rgba(0,0,0,.35); padding: .4em .6em; border-radius: 6px; margin-top: .4em; white-space: pre-wrap; word-break: break-all; user-select: all; }
+            #LibraryDoctorPage .ld-ignore { float: right; background: none; border: 1px solid rgba(255,255,255,.25); color: inherit; border-radius: 6px; padding: .15em .6em; cursor: pointer; opacity: .7; }
+            #LibraryDoctorPage .ld-ignore:hover { opacity: 1; }
+            #LibraryDoctorPage .ld-more { margin: .6em 0; }
+            #LibraryDoctorPage details.ld-settings { margin-top: 2.5em; }
+            #LibraryDoctorPage details.ld-settings summary { cursor: pointer; font-size: 1.2em; }
+        </style>
+        <div data-role="content">
+            <div class="content-primary">
+                <h1>🩺 Library Doctor</h1>
+                <p>A checkup for your library. It runs every Sunday morning by itself, or whenever you press the button.</p>
+                <p>
+                    <button is="emby-button" type="button" id="LdRun" class="raised button-submit emby-button"><span>Run checkup now</span></button>
+                    <span id="LdStatus" style="margin-left:1em;opacity:.8;"></span>
+                </p>
+
+                <div id="LdTiles" class="ld-tiles"></div>
+                <div id="LdResults"></div>
+
+                <details class="ld-settings">
+                    <summary>Settings</summary>
+                    <form id="LibraryDoctorForm">
+                        <h3>Checks</h3>
+                        <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="CheckUnreadable" /><span>Files Jellyfin can't read</span></label></div>
+                        <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="CheckMissingEpisodes" /><span>Missing episodes</span></label></div>
+                        <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="CheckDuplicates" /><span>Duplicates</span></label></div>
+                        <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="CheckMatches" /><span>Wrong or missing matches</span></label></div>
+                        <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="CheckPlayback" /><span>Files that will need converting</span></label></div>
+                        <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="CheckArtwork" /><span>Missing posters</span></label></div>
+
+                        <h3>What your TV plays without converting</h3>
+                        <p style="opacity:.75;">The defaults fit Apple TV. Use the short names Jellyfin uses, separated by commas.</p>
+                        <div class="inputContainer"><input is="emby-input" type="text" id="PlayableVideoCodecs" label="Video" /></div>
+                        <div class="inputContainer"><input is="emby-input" type="text" id="PlayableAudioCodecs" label="Audio" /></div>
+                        <div class="inputContainer"><input is="emby-input" type="text" id="PlayableContainers" label="File types" /></div>
+                        <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="FlagImageSubtitles" /><span>Point out picture based subtitles (PGS/VobSub)</span></label></div>
+
+                        <h3>Show NAS paths</h3>
+                        <p style="opacity:.75;">Jellyfin runs in Docker, so it sees your folders under different names. Fill these in and the report (and the fix commands) use the NAS paths. Example: <code>/media</code> and <code>/volume1/Media</code>.</p>
+                        <div class="inputContainer"><input is="emby-input" type="text" id="PathInJellyfin" label="Path inside Jellyfin" /></div>
+                        <div class="inputContainer"><input is="emby-input" type="text" id="PathOnNas" label="Same folder on the NAS" /></div>
+
+                        <p><span id="LdIgnoredCount"></span> <button is="emby-button" type="button" id="LdClearIgnored" class="emby-button"><span>Show ignored items again</span></button></p>
+
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button"><span>Save</span></button>
+                    </form>
+                </details>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = '9dff327a-0a86-41c0-b5b9-26ecede62164';
+                var page = document.querySelector('#LibraryDoctorPage');
+                function $(s) { return page.querySelector(s); }
+                var checks = ['CheckUnreadable', 'CheckMissingEpisodes', 'CheckDuplicates', 'CheckMatches', 'CheckPlayback', 'CheckArtwork', 'FlagImageSubtitles'];
+                var texts = ['PlayableVideoCodecs', 'PlayableAudioCodecs', 'PlayableContainers', 'PathInJellyfin', 'PathOnNas'];
+                var defaults = { PlayableVideoCodecs: 'h264,hevc', PlayableAudioCodecs: 'aac,ac3,eac3,mp3,alac,flac', PlayableContainers: 'mp4,m4v,mov,mkv' };
+                var sections = [
+                    { id: 'unreadable', name: "Can't read", about: 'Files Jellyfin can\'t open: wrong permissions, missing files, or files with no media info. These won\'t play at all.', icon: '🚫' },
+                    { id: 'episodes', name: 'Missing episodes', about: 'Gaps in the seasons you have.', icon: '🧩' },
+                    { id: 'duplicates', name: 'Duplicates', about: 'The same movie or episode more than once.', icon: '👯' },
+                    { id: 'matches', name: 'Wrong matches', about: 'Titles Jellyfin couldn\'t identify, or may have matched to the wrong movie or show.', icon: '🔎' },
+                    { id: 'playback', name: 'Will convert', about: 'Files your TV can\'t play as they are, so Jellyfin converts them while they play. This is where slow starts come from. Yellow ones convert the picture (hard work); blue ones only the sound, the file type or the subtitles.', icon: '🐢' },
+                    { id: 'artwork', name: 'No poster', about: 'Titles with no poster image.', icon: '🖼️' }
+                ];
+                var report = null, filter = null, shown = {}, polling = null;
+
+                function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+                function api(path, method) {
+                    return ApiClient.fetch({ url: ApiClient.getUrl('LibraryDoctor/' + path), type: method || 'GET', dataType: method === 'POST' ? undefined : 'json' });
+                }
+
+                function load() {
+                    return api('Report').then(function (r) {
+                        report = r.report;
+                        render();
+                        if (r.running) {
+                            $('#LdStatus').textContent = 'Checking… ' + Math.round(r.progress || 0) + '%';
+                            $('#LdRun').disabled = true;
+                            if (!polling) { polling = setInterval(load, 2000); }
+                        } else {
+                            $('#LdRun').disabled = false;
+                            if (polling) { clearInterval(polling); polling = null; }
+                            $('#LdStatus').textContent = report
+                                ? 'Last checkup ' + new Date(report.RanAt).toLocaleString() + ': ' + report.ItemsChecked + ' files in ' + Math.round(report.Seconds) + 's'
+                                : 'No checkup yet. Press the button to run the first one.';
+                        }
+                    });
+                }
+
+                function render() {
+                    var tiles = $('#LdTiles'), out = $('#LdResults');
+                    if (!report) { tiles.innerHTML = ''; out.innerHTML = ''; return; }
+                    var by = {};
+                    report.Findings.forEach(function (f) { (by[f.Check] = by[f.Check] || []).push(f); });
+                    tiles.innerHTML = sections.map(function (s) {
+                        var n = (by[s.id] || []).length;
+                        var cls = n === 0 ? 'clean' : (s.id === 'unreadable' ? 'bad' : 'warn');
+                        return '<div class="ld-tile ' + cls + (filter === s.id ? ' on' : '') + '" data-id="' + s.id + '"><span>' + s.icon + ' ' + esc(s.name) + '</span><b>' + (n === 0 ? '✓' : n) + '</b></div>';
+                    }).join('');
+                    out.innerHTML = sections.filter(function (s) { return (!filter || filter === s.id) && (by[s.id] || []).length; }).map(function (s) {
+                        var list = by[s.id];
+                        var limit = shown[s.id] || 25;
+                        var html = '<div class="ld-section"><h2>' + s.icon + ' ' + esc(s.name) + ' (' + list.length + ')</h2><p>' + esc(s.about) + '</p>';
+                        html += list.slice(0, limit).map(function (f) {
+                            return '<div class="ld-item ' + esc(f.Severity) + '">' +
+                                '<button class="ld-ignore" data-key="' + esc(f.Check + ':' + f.ItemId) + '" title="Hide this from future checkups">Ignore</button>' +
+                                '<a href="#/details?id=' + esc(f.ItemId) + '&serverId=' + esc(ApiClient.serverId()) + '">' + esc(f.Title) + '</a>' +
+                                '<div class="ld-detail">' + esc(f.Detail) + '</div>' +
+                                (f.Path ? '<div class="ld-path">' + esc(f.Path) + '</div>' : '') +
+                                (f.Fix ? '<div class="ld-fix">' + esc(f.Fix) + '</div>' : '') +
+                                '</div>';
+                        }).join('');
+                        if (list.length > limit) {
+                            html += '<button is="emby-button" type="button" class="emby-button ld-more" data-id="' + s.id + '"><span>Show ' + Math.min(50, list.length - limit) + ' more</span></button>';
+                        }
+                        return html + '</div>';
+                    }).join('') || '<p style="font-size:1.2em;">🎉 Clean bill of health' + (filter ? ' for this one.' : '. Nothing needs attention.') + '</p>';
+                }
+
+                page.querySelector('#LdTiles').addEventListener('click', function (e) {
+                    var t = e.target.closest('.ld-tile');
+                    if (!t) { return; }
+                    filter = filter === t.dataset.id ? null : t.dataset.id;
+                    render();
+                });
+
+                page.querySelector('#LdResults').addEventListener('click', function (e) {
+                    var more = e.target.closest('.ld-more');
+                    if (more) { shown[more.dataset.id] = (shown[more.dataset.id] || 25) + 50; render(); return; }
+                    var ign = e.target.closest('.ld-ignore');
+                    if (ign) {
+                        var key = ign.dataset.key;
+                        api('Ignore?key=' + encodeURIComponent(key), 'POST').then(function () {
+                            report.Findings = report.Findings.filter(function (f) { return f.Check + ':' + f.ItemId !== key; });
+                            render();
+                        });
+                    }
+                });
+
+                $('#LdRun').addEventListener('click', function () {
+                    $('#LdRun').disabled = true;
+                    $('#LdStatus').textContent = 'Starting…';
+                    api('Run', 'POST').then(function () { setTimeout(load, 800); }, function () {
+                        $('#LdRun').disabled = false;
+                        $('#LdStatus').textContent = 'Something went wrong; check the Jellyfin log for "Library Doctor".';
+                    });
+                });
+
+                $('#LdClearIgnored').addEventListener('click', function () {
+                    api('ClearIgnored', 'POST').then(function () {
+                        $('#LdIgnoredCount').textContent = 'Nothing ignored. Ignored items come back at the next checkup.';
+                    });
+                });
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+                        checks.forEach(function (k) { $('#' + k).checked = c[k] !== false; });
+                        texts.forEach(function (k) { $('#' + k).value = c[k] || defaults[k] || ''; });
+                        var n = (c.Ignored || []).length;
+                        $('#LdIgnoredCount').textContent = n ? n + ' item' + (n > 1 ? 's' : '') + ' ignored.' : 'Nothing ignored.';
+                        return load();
+                    }).then(function () { Dashboard.hideLoadingMsg(); }, function () { Dashboard.hideLoadingMsg(); });
+                });
+
+                page.addEventListener('pagehide', function () {
+                    if (polling) { clearInterval(polling); polling = null; }
+                });
+
+                $('#LibraryDoctorForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+                        checks.forEach(function (k) { c[k] = $('#' + k).checked; });
+                        texts.forEach(function (k) { c[k] = $('#' + k).value.trim() || defaults[k] || ''; });
+                        ApiClient.updatePluginConfiguration(pluginId, c).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    return false;
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
