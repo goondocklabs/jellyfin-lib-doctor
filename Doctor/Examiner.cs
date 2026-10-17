@@ -468,13 +468,34 @@ public sealed class Examiner
                      .Where(g => g.Count() > 1))
         {
             var items = g.Select(x => x.Item).ToList();
+
+            // Different folders whose names disagree on the year (or one has no year) usually mean a wrong match,
+            // like "Aladdin" (1992) matched to Aladdin (2019). Link to the copy that looks wrong.
+            string? FileYear(BaseItem i)
+            {
+                var m = YearRe.Match(NameFromPath(i));
+                return m.Success ? m.Groups[1].Value : null;
+            }
+
+            var match = items[0].ProductionYear?.ToString(CultureInfo.InvariantCulture);
+            var folders = items.Select(i => System.IO.Path.GetDirectoryName(i.Path ?? string.Empty)).Distinct().Count();
+            var suspect = items.Where(i => FileYear(i) != match).ToList();
+            var wrongMatch = folders > 1 && match is not null && suspect.Count > 0 && suspect.Count < items.Count;
+            if (wrongMatch)
+            {
+                items = suspect.Concat(items.Except(suspect)).ToList();
+            }
+
+            var odd = wrongMatch ? FileYear(items[0]) : null;
             add(new Finding
             {
                 Check = "duplicates",
                 Severity = "warning",
                 ItemId = items[0].Id.ToString("N"),
                 Title = Label(items[0]),
-                Detail = $"{items.Count} copies in the library. Keep the best one, or put them in one folder so Jellyfin shows them as versions.",
+                Detail = wrongMatch
+                    ? $"Probably a wrong match, not a duplicate: these are all matched to the {match} movie, but the first file's folder {(odd is null ? "has no year" : "says " + odd)}. If it's a different movie, open it (the link), then Identify, and add the year to its folder name."
+                    : $"{items.Count} copies in the library. Keep the best one, or put them in one folder so Jellyfin shows them as versions.",
                 Path = string.Join("\n", items.Select(i => NasPath(i.Path ?? string.Empty)))
             });
         }
