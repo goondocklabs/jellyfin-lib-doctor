@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "0.1.0.0: first release. A weekly checkup (or on demand) that lists files Jellyfin can't read, with a fix command for permission problems; missing episodes; duplicates; unmatched or wrongly matched titles; files your TV will need converting; and titles with no poster. Its page is in the Dashboard menu.",
+  "changelog": "0.1.0.1: duplicates that are really a wrong match (like Aladdin 1992 matched to Aladdin 2019) are called out as such, with the link going to the copy to fix. 0.1.0.0: first release. A weekly checkup (or on demand) that lists files Jellyfin can't read, with a fix command for permission problems; missing episodes; duplicates; unmatched or wrongly matched titles; files your TV will need converting; and titles with no poster. Its page is in the Dashboard menu.",
   "description": "A checkup for your Jellyfin library: unreadable files, missing episodes, duplicates, bad matches, missing posters, and files that will need converting.",
   "guid": "9dff327a-0a86-41c0-b5b9-26ecede62164",
   "name": "Library Doctor",
@@ -8,7 +8,7 @@
   "owner": "goondocklabs",
   "targetAbi": "10.11.0.0",
   "timestamp": "2026-10-17T00:00:00.0000000Z",
-  "version": "0.1.0.0",
+  "version": "0.1.0.1",
   "status": "Active",
   "autoUpdate": true,
   "assemblies": [],
