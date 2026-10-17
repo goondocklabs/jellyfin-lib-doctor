@@ -131,7 +131,7 @@ public sealed class Examiner
                 IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Episode, BaseItemKind.MusicVideo, BaseItemKind.Video },
                 IsVirtualItem = false,
                 Recursive = true
-            }).Where(i => !string.IsNullOrEmpty(i.Path)).ToList();
+            }).Where(i => !string.IsNullOrEmpty(i.Path) && i.OwnerId == Guid.Empty).ToList(); // skip extras and alternate versions
             var titles = _library.GetItemList(new InternalItemsQuery
             {
                 IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Series, BaseItemKind.MusicVideo },
